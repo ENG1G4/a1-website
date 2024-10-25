@@ -1,0 +1,169 @@
+@startuml
+
+' Flatten packages
+set separator none
+package io.github.eng1g4 <<Frame>> {
+
+  package map {
+    class Location {
+      float x
+      float y
+      float getX()
+      float getY()
+      void setX(float x)
+      void setY(float y)
+    }
+
+    class BoundingBox {
+      Location topLeft
+      Location topRight
+      Location bottomLeft
+      Location bottomRight
+      intersects(BoundingBox boundingBox)
+    }
+
+    class Map {
+      List<Obstacle> obstacles
+      List<Building> placedBuildings
+      boolean canPlace(BoundingBox boundingBox)
+    }
+
+    note right of Map::"canPlace(BoundingBox boundingBox)"
+      Checks if the given boundingBox
+      intersects any obstacles or
+      placed buildings.
+    end note
+
+  }
+
+  note top of map
+    Probably included in the game engine.
+  end note
+
+  package building {
+
+    enum BuildingProperty {
+      TEACHING
+      ACCOMMODATION
+      RECREATIONAL
+      RESTAURANT
+    }
+
+    interface IBuilding {
+      float getDistanceFrom(Building other)
+      int getCapacity()
+      int getCurrentStudents()
+      List<BuildingProperty> getBuildingProperties()
+      int getCost()
+    }
+
+    abstract class Building implements IBuilding {
+      int studentCapacity
+      int currentStudents
+      List<BuildingProperty> buildingProperties
+      int cost
+      BoundingBox boundingBox
+    }
+
+    class Accommodation extends Building {
+      void globalAccommodationFunction()
+    }
+
+    note top of Accommodation
+      The constructor would add BuildingProperty.ACCOMMODATION to buildingProperty.
+    end note
+
+    class ExampleAccommodationVariant extends Accommodation {
+
+    }
+
+    class LectureHall extends Building {
+
+    }
+
+    class Restaurant extends Building {
+
+    }
+
+    class SportsCentre extends Building {
+
+    }
+
+    note bottom of ExampleAccommodationVariant
+      Overrides fields and methods to hold any building-specific information
+    end note
+
+    class BuildingHelper {
+      void placeBuilding(Building building, Location location)
+      void moveBuilding(Building building, Location location)
+      void upgradeBuilding(Building building)
+    }
+
+  }
+
+  package event {
+
+    interface IEvent {
+      boolean isPositive()
+      void execute()
+    }
+
+    abstract class Event implements IEvent {
+      boolean positive
+    }
+
+    class ExampleEvent extends Event {
+      String someOtherField
+      void execute()
+    }
+
+    note bottom of ExampleEvent
+      ExampleEvent overrides execute
+      to perform functions of event.
+    end note
+
+    class EventManager {
+      Random random
+    }
+
+    note bottom of EventManager
+      Responsible for randomly "spawning" events
+    end note
+
+  }
+
+  class TimeCounter {
+  }
+
+  note top of TimeCounter
+    Responsible for displaying time.
+  end note
+
+  class GameState {
+    long balance
+    long getBalance()
+    void addBalance(long amount)
+    void removeBalance(long amount)
+  }
+
+  note top of GameState
+    Game entry point. Responsible for
+    setting up the game and triggering
+    calculations of student satisfaction.
+  end note
+
+  package menu {
+
+    class MainMenu {
+
+    }
+
+    class PauseMenu {
+
+    }
+
+  }
+
+}
+
+@enduml

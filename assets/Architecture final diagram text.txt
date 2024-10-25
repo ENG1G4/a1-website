@@ -1,0 +1,219 @@
+@startuml
+
+' Flatten packages
+set separator none
+package io.github.eng1g4 <<Frame>> {
+
+  class Main extends ApplicationAdapter {
+    -SpriteBatch batch
+    -ShapeRenderer shapeRenderer
+    -Texture image
+    -boolean gameOver
+    -boolean isPaused
+    -boolean showCredits
+    -Map map
+    -BitmapFont font
+    -OrthographicCamera camera
+    -Viewport viewport
+    -UI ui
+    -CountdownTimer countdownTimer
+    -GlyphLayout pauseMenuTextLayout
+    -GlyphLayout gameOverTextLayout
+    -GlyphLayout creditsTextLayout
+    --Overridden from ApplicationAdapter--
+    +void create()
+    +void resize(int width, int height)
+    +void render()
+    +void dispose()
+    ---
+    -GlyphLayout getGlyphLayout(String text)
+    +void togglePause()
+    -boolean isPaused()
+    +void endGame()
+    +Map getMap()
+    -void drawCentredGlyphLayout(GlyphLayout glyphLayout)
+    -void drawPauseMenu()
+    +void toggleCredits()
+    -void drawGameOverScreen()
+    -void drawTimeRemaining()
+  }
+
+  note right of ApplicationAdapter
+    class provided by libGDX
+  end note
+
+  class Diamond {
+      -float x0
+      -float y0
+      -float x1
+      -float y1
+      -float x2
+      -float y2
+      -float x3
+      -float y3
+
+      +float x0()
+      +float y0()
+      +float x1()
+      +float y1()
+      +float x2()
+      +float y2()
+      +float x3()
+      +float y3()
+  }
+
+  note left of Diamond
+    This is a Java Record, so public getters are
+    automatically created for the 8 fields.
+  end note
+
+  class CountdownTimer {
+    -int timeRemaining
+    -Timer.Task countdownTimer
+
+   +void start()
+   +void stop()
+   +String getTimeRemaining()
+  }
+
+  class Map implements Disposable {
+    -int width
+    -int height
+    -Texture backgroundTexture
+    -TextureRegion backgroundRegion
+    -float originX
+    -float originY
+    -float tileWidth
+    -float tileHeight
+    -float virtualWidth
+    -float virtualHeight
+    -PlaceableObject objectToPLace
+    -ArrayList<PlaceableObject> placeableObjects
+    -BuildingType selectedBuilding
+    -BuildingManager buildingManager
+
+    -void drawOnGrid(Consumer<Diamond> consumer, int x, int y)
+    -void drawGrid(ShapeRenderer shapeRenderer)
+    -void colourCell(ShapeRenderer shapeRenderer, int tileX, int tileY, Color color)
+    -void drawHoveredCell(ShapeRenderer shapeRenderer, float mouseWorldX, float mouseWorldY)
+    +void handleClickLeft(float worldX, float worldY)
+    -void drawBuildings(SpriteBatch batch)
+    +void draw(SpriteBatch batch, ShapeRenderer shapeRenderer, float mouseWorldX, float mouseWorldY)
+    -int[] screenToTile(float worldX, float worldY)
+    +void setTileSizeAndOrigin()
+    +void selectBuilding(BuildingType buildingType)
+    +BuildingType getSelectedBuilding()
+    +void dispose()
+  }
+
+  note left of Disposable
+    Interface provided by libGDX
+  end note
+
+  class UI {
+    -Stage stage
+    -Label[] buildingCountText
+    -Label buildingSelectionIndexLabel
+    -Main main
+    -Viewport viewport
+    -Camera camera
+    -BuildingManager buildingManager
+
+    -void createPauseButton(Skin skin)
+    -void createBuildingButtons(Skin skin)
+    -void createBuildingCountLabels(Skin skin)
+    -void createSelectedBuildingLabel(Skin skin)
+    +void drawBuildingLabels()
+    +void draw()
+    +void resize(int width, int height)
+    +Stage getStage()
+
+    --Inner class GameInputProcessor--
+    -Class GameInputProcessor implements InputProcessor {
+      +boolean keyDown(int keycode)
+      +boolean keyUp(int keycode)
+      +boolean keyTyped(char character)
+      +boolean touchDown(int screenX, int screenY, int pointer, int button)
+      +boolean touchUp(int screenX, int screenY, int pointer, int button)
+      +boolean touchCancelled(int screenX, int screenY, int pointer, int button)
+      +boolean touchDragged(int screenX, int screenY, int pointer)
+      +boolean mouseMoved(int screenX, int screenY)
+      +boolean scrolled(float amountX, float amountY)
+    }
+
+  }
+
+  package building {
+
+    enum BuildingType {
+      ACCOMMODATION
+      SPORTS_CENTRE
+      LECTURE_THEATRE
+      RESTAURANT
+      COUNT
+
+      ---
+      {static} List<BuildingType> cachedValues
+      ---
+      -String name
+      +String getName()
+
+    }
+
+    note top of BuildingType
+      COUNT's ordinal value is used to find the number
+      of building types at runtime. cachedValues is
+      created because otherwise we would be making an
+      expensive values() call 60 times per second.
+    end note
+
+    interface IBuilding {
+      +String getName()
+    }
+
+    class PlaceableObject extends Rectangle {
+      {static} -HashMap<String, Texture> textureCache
+      -Texture texture
+      +void draw(SpriteBatch batch, float originX, float originY, float tileWidth, float tileHeight)
+      +void dispose()
+    }
+
+    note left of Rectangle
+      class provided by libGDX
+    end note
+
+    abstract class Building extends PlaceableObject implements IBuilding {
+      -BuildingType buildingType
+      +BuildingType getBuildingType()
+      +String getName()
+    }
+
+    class BuildingManager {
+      -int[] buildingCount
+      +int getBuildingCount(BuildingType buildingType)
+      +void registerBuilding(BuildingType buildingType)
+    }
+
+    package impl {
+      class Accommodation extends Building {
+        {static} -String TEXTURE_PATH
+      }
+
+      class LectureTheatre extends Building {
+        {static} -String TEXTURE_PATH
+      }
+
+      class Restaurant extends Building {
+        {static} -String TEXTURE_PATH
+      }
+
+      class SportsCentre extends Building {
+        {static} -String TEXTURE_PATH
+      }
+    }
+
+  }
+
+}
+
+@enduml
