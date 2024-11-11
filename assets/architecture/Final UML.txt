@@ -1,6 +1,7 @@
 @startuml
 
 ' Flatten packages
+left to right direction
 set separator none
 package io.github.eng1g4 <<Frame>> {
 
@@ -8,48 +9,32 @@ package io.github.eng1g4 <<Frame>> {
     -SpriteBatch batch
     -ShapeRenderer shapeRenderer
     -Texture image
-    -boolean gameOver
-    -boolean isPaused
-    -boolean showCredits
     -Map map
     -BitmapFont font
     -OrthographicCamera camera
     -Viewport viewport
     -UI ui
-    -CountdownTimer countdownTimer
     -float mouseX
     -float mouseY
-    -GlyphLayout pauseMenuTextLayout
-    -GlyphLayout gameOverTextLayout
-    -GlyphLayout creditsTextLayout
+    -GameOverMenu gameOverMenu
+    -PauseMenu pauseMenu
+    -GameStateManager gameStateManager
+    +BuildingManager()
     --Overridden from ApplicationAdapter--
     +void create()
     +void resize(int width, int height)
     +void render()
     +void dispose()
     ---
-    -GlyphLayout getGlyphLayout(String text)
-    +void togglePause()
-    -boolean isPaused()
-    +void endGame()
-    +Map getMap()
-    -void drawCentredGlyphLayout(GlyphLayout glyphLayout)
-    -void drawPauseMenu()
-    +void toggleCredits()
-    -void drawGameOverScreen()
     -void drawTimeRemaining()
     +void setMouseX(float mouseX)
     +void setMouseY(float mouseY)
   }
 
-  note right of ApplicationAdapter
-    class provided by libGDX
-  end note
-
   class CountdownTimer {
     -int timeRemaining
     -Timer.Task countdownTimer
-
+   +CountdownTimer(GameStateManager gameStateManager)
    +void start()
    +void stop()
    +String getTimeRemaining()
@@ -69,7 +54,9 @@ package io.github.eng1g4 <<Frame>> {
     -BuildingType selectedBuilding
     -BuildingManager buildingManager
     -ObstacleMap obstacleMap
+    -SoundManager soundManager
 
+    +Map(String backgroundTexturePath, int width, int height, float virtualWidth, float virtualHeight, BuildingManager buildingManager)
     -void createObstacleMap()
     -void drawGrid(ShapeRenderer shapeRenderer)
     -void colourCell(ShapeRenderer shapeRenderer, int tileX, int tileY, Color color)
@@ -86,19 +73,16 @@ package io.github.eng1g4 <<Frame>> {
     +void dispose()
   }
 
-  note left of Disposable
-    Interface provided by libGDX
-  end note
-
   class UI {
     -Stage stage
-    -Stage pauseStage
     -Label[] buildingCountText
     -Label buildingSelectionIndexLabel
     -Main main
     -Viewport viewport
     -Camera camera
     -BuildingManager buildingManager
+
+    +UI(Viewport viewport, Map map, BuildingManager buildingManager, GameInputProcessor gameInputProcessor, GameStateManager, gameStateManager)
 
     -void createPauseButton(Skin skin)
     -void createBuildingButtons(Skin skin)
@@ -109,37 +93,53 @@ package io.github.eng1g4 <<Frame>> {
     +void drawPause()
     +void resize(int width, int height)
     +Stage getStage()
+  }
 
-    --Inner class GameInputProcessor--
-    -Class GameInputProcessor implements InputProcessor {
-      +boolean keyDown(int keycode)
-      +boolean keyUp(int keycode)
-      +boolean keyTyped(char character)
-      +boolean touchDown(int screenX, int screenY, int pointer, int button)
-      +boolean touchUp(int screenX, int screenY, int pointer, int button)
-      +boolean touchCancelled(int screenX, int screenY, int pointer, int button)
-      +boolean touchDragged(int screenX, int screenY, int pointer)
-      +boolean mouseMoved(int screenX, int screenY)
-      +boolean scrolled(float amountX, float amountY)
-    }
+  class GameInputProcessor implements InputProcessor {
+    -GameStateManager gameStateManager
+    -PauseMenu pauseMenu
+    -Camera camera
+    -Map map
+    -Main main
+    +GameInputProcessor(GameStateManager gameStateManager, PauseMenu pauseMenu, Camera camera, Map map, Main main)
+    --Overridden from InputProcessor--
+    +boolean keyDown(int keycode)
+    +boolean keyUp(int keycode)
+    +boolean keyTyped(char character)
+    +boolean touchDown(int screenX, int screenY, int pointer, int button)
+    +boolean touchUp(int screenX, int screenY, int pointer, int button)
+    +boolean touchCancelled(int screenX, int screenY, int pointer, int button)
+    +boolean touchDragged(int screenX, int screenY, int pointer)
+    +boolean mouseMoved(int screenX, int screenY)
+    +boolean scrolled(float amountX, float amountY)
+  }
 
-    class IntTuple {
-      +int x
-      +int y
+  class ObstacleMap {
+    -float height
+    -float width
+    -HashSet<Double> obstacles
 
-      +double pack()
-    }
+    +ObstacleMap(float width, float height)
 
-    class ObstacleMap {
-      -float height
-      -float width
-      -HashSet<Double> obstacles
+    +void add(int x, int y)
+    +void resize(float newWidth, float newHeight)
+    +boolean contains(int x, int y)
+  }
 
-      +void add(int x, int y)
-      +void resize(float newWidth, float newHeight)
-      +boolean contains(int x, int y)
-    }
-
+  class SoundManager implements Disposable {
+    -Sound buildingPlacementSound
+    -Music backgroundMusic
+    -float soundEffectVolume
+    -float musicVolume
+    +SoundManager()
+    +void playBuildingPlacementSound()
+    +void playBackgroundMusic()
+    +void pauseBackgroundMusic()
+    +void setMusicVolume(float volume)
+    +void setSoundEffectVolume(float volume)
+    +float getSoundEffectVolume()
+    +float getMusicVolume()
+    +void dispose()
   }
 
   package building {
@@ -149,10 +149,10 @@ package io.github.eng1g4 <<Frame>> {
       SPORTS_CENTRE
       LECTURE_THEATRE
       RESTAURANT
-      COUNT
 
       ---
-      {static} List<BuildingType> cachedValues
+      +{static} List<BuildingType> CACHED_VALUES
+      +{static} int COUNT
       ---
       -String name
       -int width
@@ -161,6 +161,7 @@ package io.github.eng1g4 <<Frame>> {
       -float textureXOffset
       -float textureYOffset
       ---
+      +BuildingType(String name, int width, int height, float textureHeight, float textureXOffset, float textureYOffset)
       +String getName()
       +int getWidth()
       +int getHeight()
@@ -169,13 +170,6 @@ package io.github.eng1g4 <<Frame>> {
       +float getYOffset()
     }
 
-    note top of BuildingType
-      COUNT's ordinal value is used to find the number
-      of building types at runtime. cachedValues is
-      created because otherwise we would be making an
-      expensive values() call 60 times per second.
-    end note
-
     interface IBuilding {
       +String getName()
     }
@@ -183,6 +177,7 @@ package io.github.eng1g4 <<Frame>> {
     class PlaceableObject extends Rectangle {
       {static} -HashMap<String, Texture> TEXTURE_CACHE
       -Texture texture
+      +PlaceableObject(String texturePath, int width, int height, int x, int y)
       +float getTextureHeight()
       +float getXOffset()
       +float getYOffset()
@@ -190,13 +185,10 @@ package io.github.eng1g4 <<Frame>> {
       +void dispose()
     }
 
-    note left of Rectangle
-      class provided by libGDX
-    end note
-
     abstract class Building extends PlaceableObject implements IBuilding {
       -BuildingType buildingType
       +BuildingType getBuildingType()
+      +Building(String texturePath, int x, int y, BuildingType buildingType)
       --Overridden from PlaceableObject--
       +float getTextureHeight()
       +float getXOffset()
@@ -207,6 +199,7 @@ package io.github.eng1g4 <<Frame>> {
 
     class BuildingManager {
       -int[] buildingCount
+      +BuildingManager()
       +int getBuildingCount(BuildingType buildingType)
       +void registerBuilding(BuildingType buildingType)
     }
@@ -214,21 +207,98 @@ package io.github.eng1g4 <<Frame>> {
     package impl {
       class Accommodation extends Building {
         {static} -String TEXTURE_PATH
+        +Accommodation(int x, int y)
       }
 
       class LectureTheatre extends Building {
         {static} -String TEXTURE_PATH
+        +LectureTheatre(int x, int y)
       }
 
       class Restaurant extends Building {
         {static} -String TEXTURE_PATH
+        +Restaurant(int x, int y)
       }
 
       class SportsCentre extends Building {
         {static} -String TEXTURE_PATH
+        +SportsCentre(int x, int y)
       }
     }
 
+  }
+
+  package menu {
+    interface IMenu {
+      void draw()
+    }
+
+    abstract class Menu implements IMenu {
+      #TextHelper textHelper
+      +Menu(TextHelper textHelper)
+    }
+
+    class PauseMenu extends Menu {
+      -GlyphLayout pausedGlyphLayout
+      -GlyphLayout creditsGlyphLayout
+      -GlyphLayout pauseInstructionGlyphLayout
+      -GlyphLayout creditsInstructionGlyphLayout
+      -GlyphLayout placingInstructionsGlyphLayout
+      -boolean showCredits
+      -Viewport viewport
+      -Stage pauseStage
+      +PauseMenu(TextHelper textHelper, Viewport viewport, GameStateManager gameStateManager)
+      +void toggleCredits()
+      +Stage getStage()
+      +void createPauseButton(GameStateManager gameStateManager, Skin skin)
+      +void createVolumeSliders(Skin skin, SoundManager soundManager)
+      --Overridden from Menu--
+      +void draw()
+    }
+
+    class GameOverMenu extends Menu {
+      -GlyphLayout gameOverGlyphLayout
+      +GameOverMenu(TextHelper textHelper)
+      --Overridden from Menu--
+      +void draw()
+    }
+  }
+
+  package state {
+    enum GameState {
+      PLAYING
+      PAUSED
+      OVER
+      +GameState()
+    }
+
+    class GameStateManager {
+      -GameState currentState
+      -CountdownTimer countdownTimer
+      -SoundManager soundManager
+      +GameStateManager(SoundManager soundManager)
+      +boolean isGameOver()
+      +boolean isGamePaused()
+      +void togglePaused()
+      +void setGameOver()
+      +CountdownTImer getCountdownTimer()
+    }
+  }
+
+  package util {
+    class IntPacker {
+      +{static} double pack(int x, int y)
+    }
+
+    class TextHelper {
+      -Viewport viewport
+      -SpriteBatch spriteBatch
+      -BitmapFont font
+      +TextHelper(Viewport viewport, SpriteBatch spriteBatch, BitmapFont font)
+      +void drawCentredGlyphLayout(GlyphLayout glyphLayout)
+      +void drawCentredGlyphLayout(GlyphLayout glyphLayout, float x, float y)
+      +GlyphLayout getGlyphLayout(String text)
+    }
   }
 
 }
